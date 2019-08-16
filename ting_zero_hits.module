@@ -1,0 +1,135 @@
+<?php
+
+/**
+ * @file
+ * Ting expansion search module main file.
+ */
+
+
+
+function ting_zero_hits_menu() {
+  $items = array();
+
+
+  $items['ting/zerohitsearch'] = array(
+    'title' => 'Retreives count of search results for search suggestions',
+    'page callback' => 'ting_zero_hits_count',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+
+
+  return $items;
+}
+
+
+//
+//function ting_expansion_search_theme($existing, $type, $theme, $path) {
+//  return array(
+//      'ting_expansion_search' => array(
+//          'variables' => array(
+//              'links' => NULL,
+//          ),
+//          'template' => 'ting-expansion-search',
+//          'path' => $path . '/templates',
+//      ),
+//  );
+//}
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ *
+ * It simply tells panels where to find the .inc files that define various
+ * args, contexts, content_types.
+ */
+//function ting_expansion_search_ctools_plugin_directory($module, $plugin) {
+//  if ($module == 'ctools' && !empty($plugin)) {
+//    return "plugins/$plugin";
+//  }
+//}
+
+function ting_zero_hits_count ($query) {
+  $results = ting_zero_hits_multi($query);
+  return drupal_json_output ($results);
+}
+
+function ting_zero_hits_multi($query) {
+  $multi_request = new TingClientMultiRequestAdapter();
+  $req = array();
+  $profiles = array('min', 'ebog', 'digart',  'digfag');
+  
+  foreach ($profiles as $profile) {
+    $request = opensearch_get_request_factory()->getSearchRequest();   
+
+    $request->setQuery($query . ' and holdingsitem.agencyid=' . variable_get('ting_agency', '773000'));
+    if ($agency = variable_get('ting_agency', FALSE)) {
+      $request->setAgency($agency);
+    }
+    $request->setStart(1);
+    $request->setNumResults(0);
+
+    $request->setProfile($profile);
+    $req[] = $request;
+  }
+  
+  $results = $multi_request->execute($req);
+  //file_put_contents("/var/www/drupal7vm/drupal/debug/exp6.txt", print_r($results, TRUE), FILE_APPEND);
+  
+  $res = array();
+  $i = 0;
+  foreach ($results as $result) {
+    $response = $req[$i]->parseResponse($result);
+    $res[$profiles[$i]] = $response->numTotalObjects; //The search result come back in the same order as the requests.
+    $i++; 
+  }
+  //file_put_contents("/var/www/drupal7vm/drupal/debug/exp9.txt", print_r($res, TRUE), FILE_APPEND);
+  return $res;
+}
+
+function ting_zero_hits_ting_search_results_prefix($keys, $conditions, $results) {
+  file_put_contents("/var/www/drupal7vm/drupal/debug/zero5.txt", print_r($results, TRUE), FILE_APPEND);
+  $message = 'test';
+
+  if (!isset($results->openSearchResult->numTotalObjects)) {
+    //return $message;
+  }
+  
+  $suggestions = array();
+  if ($results->openSearchResult->numTotalObjects == 0) {
+    file_put_contents("/var/www/drupal7vm/drupal/debug/zero4.txt", print_r("Ramt2", TRUE), FILE_APPEND);
+    file_put_contents("/var/www/drupal7vm/drupal/debug/zero6.txt", print_r($keys, TRUE), FILE_APPEND);
+    $autodata = ting_zero_hits_autodata_cache();
+    foreach ($autodata as $searchkey => $data) {
+      $distance = levenshtein(strtolower($keys), strtolower($searchkey));
+      if ($distance > 0 && $distance < 4) {
+         $suggestions[$searchkey] = $data;
+      }
+    }
+    file_put_contents("/var/www/drupal7vm/drupal/debug/zero7.txt", print_r($suggestions, TRUE), FILE_APPEND);
+  }
+  
+          // Set message!
+        $msg = t('The search for "!keys" returned 0 hits. Did you mean: <ul>', array('!keys' => $keys,));
+        foreach ($suggestions as $searchkey => $data) {
+           $msg .= '<li>' . l(strtolower($searchkey), '/search/ting/' . strtolower($searchkey)) . '</li>';
+        }
+         $msg .= '</ul>';
+       // "!suggested-keys-link?" which will return !suggested-num-results hits.', array(
+         // '!suggested-keys-link' => l(strtolower($suggestion), '/search/ting/' . strtolower($suggestion), array('query' => ting_subsearch_common_query_params(variable_get('ting_subsearch_kpi_additional_url_params_inlimit', '')))),
+
+
+        $message = '<div class="messages search-field-in-content--message">' . $msg . '</div>';
+  return $message;
+}
+
+function ting_zero_hits_get_autodata_path() {
+  return file_default_scheme() . '://' . variable_get('ting_smart_search_autodata_path', 'smartsearchdata') . DIRECTORY_SEPARATOR . 'autodata.txt';
+}
+
+function ting_zero_hits_autodata_cache() {
+    @include ting_zero_hits_get_autodata_path();
+    return isset($ting_smart_search_autodata ) ? $ting_smart_search_autodata : false;
+}
+
+
+
