@@ -101,10 +101,10 @@ function ting_zero_hits_ting_search_results_prefix($keys, $conditions, $results)
         $suggestions[$searchkey] = $data;
       }
     }
-    file_put_contents("/var/www/drupal7vm/drupal/debug/zero7.txt", print_r($suggestions, TRUE), FILE_APPEND);
+    //file_put_contents("/var/www/drupal7vm/drupal/debug/zero7.txt", print_r($suggestions, TRUE), FILE_APPEND);
     // Set message!
     $msg = t('<h2>Søgningen "!keys" gav 0 resultater</h2>', array('!keys' => $keys,));
-
+    
     $show = array();
     foreach ($suggestions as $searchkey => $data) {
       $count = 0;
