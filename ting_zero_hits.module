@@ -111,7 +111,7 @@ function ting_zero_hits_ting_search_results_prefix($keys, $conditions, $results)
       foreach ($data as $number_of_clicks) {
         $count += $number_of_clicks;
       }
-      if ($count > 30) {
+      if ($count > 20) {
         $show[$searchkey] = levenshtein(strtolower($keys), strtolower($searchkey));//
       }
     }
