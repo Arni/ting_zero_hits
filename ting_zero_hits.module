@@ -97,7 +97,7 @@ function ting_zero_hits_ting_search_results_prefix($keys, $conditions, $results)
     $autodata = ting_zero_hits_autodata_cache();
     foreach ($autodata as $searchkey => $data) {
       $distance = levenshtein(strtolower($keys), strtolower($searchkey));
-      if ($distance > 0 && $distance < 4) {
+      if ($distance > 0 && $distance < 3) {
         $suggestions[$searchkey] = $data;
       }
     }
